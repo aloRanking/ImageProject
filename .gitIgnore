@@ -1,0 +1,91 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options
+.vs/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Rider
+.idea/
+.idea_modules/
+*.sln.iml
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Local history for Visual Studio
+.localhistory/
+
+# BapSter generated files
+GeneratedArtifacts/
+_Pvt_Extensions/
+
+# Paket dependency manager
+.paket/paket.exe
+paket-files/
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+
+# The packages folder can be ignored because of Package Restore
+**/packages/*
+!**/packages/build/
+
+# except build/, which is used as an MSBuild target
+!**/packages/build/
+
+# Uncomment if necessary however generally it should be regenerated when needed
+#!**/packages/repositories.config
+
+# NuGet v3's project.json files makes it easier to support multiple projects per directory.
+project.json
+project.lock.json
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node Files
+node_modules/
+npm-debug.log
+
+# Operating System Files
+Thumbs.db
+Desktop.ini
+
+# AWS Lambda Tools for Visual Studio
+aws-lambda-tools-defaults.json
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~
+
+# Generated files
+*.g.cs
+*.g.fs
