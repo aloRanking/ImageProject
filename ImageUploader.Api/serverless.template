@@ -65,10 +65,10 @@
         "Policies": [
           "AWSLambdaBasicExecutionRole",
           {
-        "S3CrudPolicy": {
-          "BucketName": "my-fsharp-image-gallery"
-        }
-      }
+            "S3CrudPolicy": {
+              "BucketName": "my-fsharp-image-gallery"
+            }
+          }
         ],
         "PackageType": "Zip",
         "Handler": "ImageUploader.Api::ImageUploader.Api.Functions_DeleteHandler_Generated::DeleteHandler",

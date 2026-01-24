@@ -51,8 +51,8 @@ public async Task<IHttpResult> DeleteHandler(string fileName)
     try {
         bool success = await BucketService.deleteImage(_s3Client, fileName);
         return success 
-            ? HttpResults.Ok($"Deleted {fileName}") 
-            : HttpResults.NotFound("File not found in XML");
+            ?  HttpResults.Ok(new { message = $"Deleted {fileName}" })
+            : HttpResults.NotFound(new { error = "File not found" });
     }
     catch (Exception ex) {
         return HttpResults.InternalServerError(ex.Message);
