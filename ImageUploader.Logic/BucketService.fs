@@ -15,7 +15,7 @@ module BucketService =
     let BucketUrl = "https://my-fsharp-image-gallery.s3.amazonaws.com"
 
     [<Literal>]
-    let xmlKey = "index2.xml"
+    let xmlKey = "index.xml"
 
     let uploadImage (s3: #IAmazonS3) (fileName: string) (content: Stream) =
         let request =
