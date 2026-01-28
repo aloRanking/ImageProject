@@ -5,8 +5,10 @@ open Amazon.S3.Model
 open System.IO
 open System.Xml.Linq
 open System.Threading.Tasks
+open Operations
 
 module BucketService =
+
 
     [<Literal>]
     let BucketName = "my-fsharp-image-gallery"
@@ -17,85 +19,104 @@ module BucketService =
     [<Literal>]
     let xmlKey = "index.xml"
 
-    let uploadImage (s3: #IAmazonS3) (fileName: string) (content: Stream) =
-        let request =
-            PutObjectRequest(BucketName = BucketName, Key = $"images/{fileName}", InputStream = content)
 
-        s3.PutObjectAsync(request)
+
+    let addNewDocFile (fileName: string) (doc: XDocument) =
+        doc.Root.Add(
+            XElement(
+                XName.Get "File",
+                XElement(XName.Get "Name", fileName),
+                XElement(XName.Get "Link", $"{BucketUrl}/images/{fileName}"),
+                XElement(XName.Get "UploadDate", System.DateTime.UtcNow.ToString("o")) // Example of adding a third info
+            )
+        )
+
+        doc
 
     let updateXmlMetadata (s3: #IAmazonS3) (newFileName: string) =
         task {
 
 
-            let! (xmlDoc: XDocument) =
-                task {
-                    try
-                        let! response = s3.GetObjectAsync(BucketName, xmlKey)
-                        use reader = new StreamReader(response.ResponseStream)
-                        return XDocument.Parse(reader.ReadToEnd())
-                    with _ ->
-                        return XDocument(XElement(XName.Get "Files"))
-                }
+            let! getResult = s3.GetObjectAsync(BucketName, xmlKey) |> Task.catch
 
-            xmlDoc.Root.Add(
-                XElement(
-                    XName.Get "File",
-                    XElement(XName.Get "Name", newFileName),
-                    XElement(XName.Get "Link", $"{BucketUrl}/images/{newFileName}"),
-                    XElement(XName.Get "UploadDate", System.DateTime.UtcNow.ToString("o")) // Example of adding a third info
-                )
-            )
+            let xmlDoc =
 
+                match getResult with
+                | Ok response ->
+                    use reader = new StreamReader(response.ResponseStream)
+                    XDocument.Parse(reader.ReadToEnd())
+                | Error _ -> XDocument(XElement(XName.Get "Files"))
+
+
+            let updatedDoc = xmlDoc |> addNewDocFile newFileName
 
             use ms = new MemoryStream()
-            xmlDoc.Save(ms)
+            updatedDoc.Save(ms)
             ms.Position <- 0L
 
             let putReq =
                 PutObjectRequest(BucketName = BucketName, Key = xmlKey, InputStream = ms)
 
-            // Final line is the expression result
-            let! response = s3.PutObjectAsync(putReq)
-            return response
+            return! s3.PutObjectAsync(putReq)
+
+
         }
 
-    let deleteImage (s3: #IAmazonS3) (fileName: string) =
+    let uploadImage (s3: #IAmazonS3) (fileName: string) (content: Stream) =
         task {
+
             let request =
+                PutObjectRequest(BucketName = BucketName, Key = $"images/{fileName}", InputStream = content)
+
+            let! _ = s3.PutObjectAsync(request)
+
+
+            let! result = updateXmlMetadata s3 fileName
+
+            return result
+
+        }
+
+
+
+
+
+    let deleteImage (s3: #IAmazonS3) (fileName: string) =
+
+        task {
+            let deleteReq =
                 DeleteObjectRequest(BucketName = BucketName, Key = $"images/{fileName}")
 
+            let! _ = s3.DeleteObjectAsync(deleteReq)
 
-            let! _ = s3.DeleteObjectAsync(request)
+            let! getResult = s3.GetObjectAsync(BucketName, xmlKey) |> Task.catch
 
-            try
-                let! response = s3.GetObjectAsync(BucketName, xmlKey)
-                use reader = new StreamReader(response.ResponseStream)
-                let xmlDoc = XDocument.Parse(reader.ReadToEnd())
-
-                let targetElement =
-
+            return!
+                match getResult with
+                | Error _ -> Task.FromResult false
+                | Ok response ->
+                    use reader = new StreamReader(response.ResponseStream)
+                    let xmlDoc = XDocument.Parse(reader.ReadToEnd())
 
                     xmlDoc.Descendants(XName.Get "File")
                     |> Seq.tryFind (fun el ->
                         let nameTag = el.Element(XName.Get "Name")
-                        nameTag <> null && (nameTag.Value = fileName || nameTag.Value = System.Net.WebUtility.UrlDecode(fileName)))
+                        nameTag <> null && (nameTag.Value = fileName))
+                    |> function
+                        | Some el ->
+                            el.Remove()
+                            use ms = new MemoryStream()
+                            xmlDoc.Save(ms)
+                            ms.Position <- 0L
 
-                match targetElement with
-                | Some el ->
-                    el.Remove() // Remove from XML tree
+                            // We return a task here, which return! will unwrap for the caller
+                            task {
+                                let! _ =
+                                    s3.PutObjectAsync(
+                                        PutObjectRequest(BucketName = BucketName, Key = xmlKey, InputStream = ms)
+                                    )
 
-                    // Save updated XML back to S3
-                    use ms = new MemoryStream()
-                    xmlDoc.Save(ms)
-                    ms.Position <- 0L
-
-                    let putReq =
-                        PutObjectRequest(BucketName = BucketName, Key = xmlKey, InputStream = ms)
-
-                    let! _ = s3.PutObjectAsync(putReq)
-                    return true
-                | None -> return false
-            with _ ->
-                return false
-
+                                return true
+                            }
+                        | None -> Task.FromResult false
         }

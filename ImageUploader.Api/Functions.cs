@@ -33,8 +33,7 @@ public class Functions
 
             // Call F# Logic
             await BucketService.uploadImage(_s3Client, fileName, ms);
-            await BucketService.updateXmlMetadata(_s3Client, fileName);
-
+            
             return HttpResults.Ok($"Uploaded {fileName} is now in the bucket and XML is updated");
         }
         catch (Exception ex)
